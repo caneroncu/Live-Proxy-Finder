@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Web;
+﻿using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace ProxyService
 {
+    //Extended WebBrowser class to not receive "Click" sound when navigation occurs
     public class WebBrowserNoSound : WebBrowser
     {
         private const int FEATURE_DISABLE_NAVIGATION_SOUNDS = 21;
