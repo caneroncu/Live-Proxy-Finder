@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
+﻿using System.Collections.Generic;
 using System.ServiceModel;
-using System.ServiceModel.Web;
-using System.Text;
+using ProxyService.Model;
 
 namespace ProxyService
 {
@@ -12,7 +8,7 @@ namespace ProxyService
     [ServiceContract]
     public interface IService
     {
-
-       
+        [OperationContract]
+        IEnumerable<Proxy> FindProxies(int timeout, byte[] proxyUrlFile);
     }
 }
