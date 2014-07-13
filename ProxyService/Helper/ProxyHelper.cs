@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using ProxyService.Exceptions;
 using ProxyService.Model;
+using ProxyService.Util;
 
 namespace ProxyService.Helper
 {
@@ -25,14 +29,22 @@ namespace ProxyService.Helper
             else
                 proxyURLS = getProxyURLs(urlFile);
 
-            if(proxyURLS == null)
+            if (proxyURLS == null)
                 throw new ProxyFileNotFoundException();
 
             //Add each URL's proxy list to proxies list 
+            //TODO: Test multithread success results
+            List<Task> tasks = new List<Task>();
             foreach (string url in proxyURLS)
             {
-                proxies.AddRange(getProxiesFromURL(url));
+                Task task = new TaskFactory().StartNew(delegate()
+                {
+                    proxies.AddRange(getProxiesFromURL(url));
+                });
+                tasks.Add(task);
             }
+            Task.WaitAll(tasks.ToArray());
+
             return proxies;
         }
 
@@ -63,35 +75,19 @@ namespace ProxyService.Helper
         private static IEnumerable<Proxy> getProxiesFromURL(string url)
         {
             List<Proxy> proxies = new List<Proxy>();
-            string urlSourceCode = null;
+            string urlText = null;
 
-            WebBrowserNoSound webBrowser = new WebBrowserNoSound();
-            webBrowser.ScriptErrorsSuppressed = true;
-            webBrowser.AllowNavigation = true;
-            webBrowser.Navigate(new Uri(url));
-
-            bool isDocumentCompleted = false;
-            webBrowser.DocumentCompleted += delegate(object sender, WebBrowserDocumentCompletedEventArgs e)
-                {
-                    WebBrowserNoSound wb = sender as WebBrowserNoSound;
-                    //Don't get page's source code, open the page first, simulate "select all" and "copy" operation
-                    //Sometimes proxy pages obfuscate their source code, it is best to "act like a user"
-                    wb.Document.ExecCommand("SelectAll", false, null);
-                    wb.Document.ExecCommand("Copy", false, null);
-                    urlSourceCode = Clipboard.GetText();
-                    isDocumentCompleted = true;
-                };
-
-            //Wait until page is loaded
-            while(isDocumentCompleted == false)
-                Application.DoEvents();
+            WebCrawler crawler = new WebCrawler();
+            crawler.Crawl(url);
+            if (crawler.IsCrawlingCompleted)
+                urlText += crawler.CrawledText;
 
             //IP:PORT pattern (whitespaces between ip and port are ignored)
             //TODO: Can find a better regex
             string pattern =
                 @"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s{0,}[\:*\s{0,}]([0-9]{1,5}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])";
 
-            string refinedSourceCode = urlSourceCode.Replace("\n", "");
+            string refinedSourceCode = urlText.Replace("\n", "");
             refinedSourceCode = refinedSourceCode.Replace("\r", "");
             MatchCollection matchCollection = Regex.Matches(refinedSourceCode, pattern);
 
@@ -109,9 +105,11 @@ namespace ProxyService.Helper
                     proxies.Add(proxy);
                 }
                 //Ignore parsing errors, just don't add which it couldn't parse
-                catch (Exception){}
+                catch (Exception) { }
             }
             return proxies;
         }
+
+
     }
 }

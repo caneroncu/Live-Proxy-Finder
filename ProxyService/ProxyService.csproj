@@ -80,6 +80,7 @@
     <Compile Include="Component\WebBrowserNoSound.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Util\WebCrawler.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
