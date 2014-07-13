@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using System.Windows.Forms;
 using ProxyService.Exceptions;
 using ProxyService.Model;
 using ProxyService.Util;
+using Starksoft.Net.Proxy;
 
 namespace ProxyService.Helper
 {
@@ -43,8 +45,10 @@ namespace ProxyService.Helper
                 });
                 tasks.Add(task);
             }
-            Task.WaitAll(tasks.ToArray());
-
+            if (timeout > 0)
+                Task.WaitAll(tasks.ToArray(), timeout);
+            else
+                Task.WaitAll(tasks.ToArray());
             return proxies;
         }
 
@@ -111,5 +115,66 @@ namespace ProxyService.Helper
         }
 
 
+        public static ProxyWithType CheckProxy(string IP, int port, int timeout)
+        {
+            string connectionTestIPAddress = ConfigurationManager.AppSettings["ConnectionTestIP"];
+            string connectionTestWebAddress = ConfigurationManager.AppSettings["ConnectionTestWebAddress"];
+            string connectionTestPort = ConfigurationManager.AppSettings["ConnectionTestPort"];
+
+            ProxyWithType proxyWithType = new ProxyWithType();
+            proxyWithType.IP = IP;
+            proxyWithType.Port = port.ToString();
+            proxyWithType.ProxyType = Model.ProxyType.Dead;
+
+            TaskFactory taskFactory = new TaskFactory();
+            List<Task> tasks = new List<Task>();
+
+            tasks.Add(taskFactory.StartNew(delegate
+            {
+                try
+                {
+                    Socks4ProxyClient proxyClient4 = new Socks4ProxyClient(IP, port);
+                    proxyClient4.CreateConnection(connectionTestIPAddress, int.Parse(connectionTestPort));
+                    proxyWithType.ProxyType = Model.ProxyType.Socks4;
+                }
+                catch (Exception)
+                {
+                    //If proxy timeouts don't do anything
+                }
+            }));
+            tasks.Add(taskFactory.StartNew(delegate
+            {
+                try
+                {
+                    Socks5ProxyClient proxyClient5 = new Socks5ProxyClient(IP, port);
+                    proxyClient5.CreateConnection(connectionTestIPAddress, int.Parse(connectionTestPort));
+                    proxyWithType.ProxyType = Model.ProxyType.Socks5;
+                }
+                catch (Exception)
+                {
+                    //If proxy timeouts don't do anything
+                }
+            }));
+            tasks.Add(taskFactory.StartNew(delegate
+            {
+                try
+                {
+                    WebClient wc = new WebClient();
+                    wc.Proxy = new WebProxy(IP, port);
+                    wc.DownloadString(connectionTestWebAddress);
+                    proxyWithType.ProxyType = Model.ProxyType.HTTP;
+                }
+                catch (Exception)
+                {
+                    //If proxy timeouts don't do anything
+                }
+            }));
+            if (timeout > 0)
+                Task.WaitAll(tasks.ToArray(), timeout);
+            else
+                Task.WaitAll(tasks.ToArray());
+
+            return proxyWithType;
+        }
     }
 }

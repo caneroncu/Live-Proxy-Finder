@@ -10,6 +10,9 @@ namespace ProxyService
     {
         [OperationContract]
         FindProxiesResult FindProxies(int timeout, byte[] proxyUrlFile);
+
+        [OperationContract]
+        ProxyWithType CheckProxy(string IP, int port, int timeout);
     }
 
     [DataContract]

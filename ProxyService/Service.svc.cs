@@ -1,12 +1,16 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
+using System.Net;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Windows.Forms;
 using ProxyService.Helper;
 using ProxyService.Model;
+using Starksoft.Net.Proxy;
+using ProxyType = ProxyService.Model.ProxyType;
 
 namespace ProxyService
 {
@@ -15,12 +19,18 @@ namespace ProxyService
     {
         public FindProxiesResult FindProxies(int timeout, byte[] proxyUrlFile)
         {
-            IEnumerable<Proxy> proxies = ProxyHelper.FindProxies(timeout, proxyUrlFile);
+            List<Proxy> proxies = (List<Proxy>)ProxyHelper.FindProxies(timeout, proxyUrlFile);
             return new FindProxiesResult()
                 {
                     Proxies = proxies,
-                    ProxyCount = ((List<Proxy>)proxies).Count
+                    ProxyCount = proxies.Count
                 };
         }
+
+        public ProxyWithType CheckProxy(string IP, int port, int timeout)
+        {
+            return ProxyHelper.CheckProxy(IP, port, timeout);
+        }
+
     }
 }

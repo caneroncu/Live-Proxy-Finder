@@ -9,17 +9,24 @@ namespace ProxyService.Model
         public string IP { get; set; }
         [DataMember]
         public string Port { get; set; }
+    }
+    [DataContract]
+    public class ProxyWithType : Proxy
+    {
         [DataMember]
         public ProxyType ProxyType { get; set; }
     }
+
     [DataContract]
     public enum ProxyType
     {
         [EnumMember]
-        None,
+        Dead,
         [EnumMember]
         Socks4,
         [EnumMember]
-        Socks5
+        Socks5,
+        [EnumMember]
+        HTTP
     }
 }
