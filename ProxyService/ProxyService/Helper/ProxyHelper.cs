@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using ProxyService.Exceptions;
 using ProxyService.Model;
@@ -76,12 +74,15 @@ namespace ProxyService.Helper
             webBrowser.DocumentCompleted += delegate(object sender, WebBrowserDocumentCompletedEventArgs e)
                 {
                     WebBrowserNoSound wb = sender as WebBrowserNoSound;
+                    //Don't get page's source code, open the page first, simulate "select all" and "copy" operation
+                    //Sometimes proxy pages obfuscate their source code, it is best to "act like a user"
                     wb.Document.ExecCommand("SelectAll", false, null);
                     wb.Document.ExecCommand("Copy", false, null);
                     urlSourceCode = Clipboard.GetText();
                     isDocumentCompleted = true;
                 };
 
+            //Wait until page is loaded
             while(isDocumentCompleted == false)
                 Application.DoEvents();
 
@@ -99,7 +100,8 @@ namespace ProxyService.Helper
             {
                 try
                 {
-                    string[] array = match.Value.Split(new char[] { ' ', ':' });
+                    //Split IP and PORT info
+                    string[] array = match.Value.Split(new[] { ' ', ':' });
                     Proxy proxy = new Proxy();
                     proxy.IP = array[0];
                     proxy.Port = array[1];
